@@ -1,0 +1,11 @@
+.build/
+build/
+.DS_Store
+*.xcodeproj/
+*.xcworkspace/
+*.swp
+*.swo
+
+# Local runtime data and machine-specific config.
+.codex-menu-bar/
+config.json

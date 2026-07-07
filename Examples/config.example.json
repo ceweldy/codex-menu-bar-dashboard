@@ -1,0 +1,10 @@
+{
+  "remoteHelpers": [
+    {
+      "name": "example-remote",
+      "matchContains": ["example-hostname-or-alias"],
+      "launchAgentLabel": "com.example.codex-tunnel",
+      "remoteControlURL": "http://127.0.0.1:12345/"
+    }
+  ]
+}

@@ -2,6 +2,7 @@ import AppKit
 import Darwin
 import Foundation
 @preconcurrency import UserNotifications
+import UniformTypeIdentifiers
 
 struct CommandResult {
     let exitCode: Int32
@@ -1786,15 +1787,241 @@ final class FlippedView: NSView {
     override var isFlipped: Bool { true }
 }
 
+@MainActor
+final class SettingsWindowController: NSWindowController, NSWindowDelegate {
+    private let configPath: String
+    private let onSave: (BrandingConfig) -> Void
+    private let onClose: () -> Void
+    private let nameField: NSTextField
+    private let subtitleField: NSTextField
+    private let iconField: NSTextField
+
+    init(
+        branding: BrandingConfig,
+        configPath: String,
+        onSave: @escaping (BrandingConfig) -> Void,
+        onClose: @escaping () -> Void
+    ) {
+        self.configPath = configPath
+        self.onSave = onSave
+        self.onClose = onClose
+        nameField = NSTextField(string: branding.name)
+        subtitleField = NSTextField(string: branding.subtitle)
+        iconField = NSTextField(string: branding.iconPath ?? "")
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 390),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Dashboard Settings"
+        window.isReleasedWhenClosed = false
+        window.center()
+        super.init(window: window)
+        window.delegate = self
+        configureContent()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func showWindow(_ sender: Any?) {
+        super.showWindow(sender)
+        window?.center()
+        window?.makeKeyAndOrderFront(sender)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        onClose()
+    }
+
+    private func configureContent() {
+        guard let contentView = window?.contentView else { return }
+        let root = NSStackView()
+        root.orientation = .vertical
+        root.alignment = .leading
+        root.spacing = 16
+        root.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(root)
+        NSLayoutConstraint.activate([
+            root.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            root.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            root.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 22),
+            root.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
+        ])
+
+        let title = NSTextField(labelWithString: "Appearance")
+        title.font = .systemFont(ofSize: 17, weight: .semibold)
+        root.addArrangedSubview(title)
+
+        let description = NSTextField(wrappingLabelWithString: "Customize the dashboard labels or choose another transparent menu-bar template image. These values stay in your local configuration file.")
+        description.font = .systemFont(ofSize: 11.5)
+        description.textColor = .secondaryLabelColor
+        description.maximumNumberOfLines = 2
+        description.widthAnchor.constraint(equalToConstant: 512).isActive = true
+        root.addArrangedSubview(description)
+
+        nameField.placeholderString = "CODEX DASHBOARD"
+        subtitleField.placeholderString = "Control Center"
+        iconField.placeholderString = "Bundled logo"
+        nameField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        subtitleField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        iconField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        let chooseIcon = NSButton(title: "Choose…", target: self, action: #selector(chooseIconFile))
+        chooseIcon.bezelStyle = .rounded
+        let bundledIcon = NSButton(title: "Use Bundled", target: self, action: #selector(useBundledIcon))
+        bundledIcon.bezelStyle = .rounded
+        let iconControls = NSStackView(views: [iconField, chooseIcon, bundledIcon])
+        iconControls.orientation = .horizontal
+        iconControls.alignment = .centerY
+        iconControls.spacing = 7
+        iconField.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
+
+        let grid = NSGridView(views: [
+            [settingsLabel("Name"), nameField],
+            [settingsLabel("Subtitle"), subtitleField],
+            [settingsLabel("Menu Bar Icon"), iconControls]
+        ])
+        grid.rowSpacing = 11
+        grid.columnSpacing = 12
+        grid.column(at: 0).xPlacement = .trailing
+        grid.column(at: 1).xPlacement = .fill
+        grid.widthAnchor.constraint(equalToConstant: 512).isActive = true
+        root.addArrangedSubview(grid)
+
+        let separator = NSBox()
+        separator.boxType = .separator
+        separator.widthAnchor.constraint(equalToConstant: 512).isActive = true
+        root.addArrangedSubview(separator)
+
+        let filesTitle = NSTextField(labelWithString: "Dashboard Data")
+        filesTitle.font = .systemFont(ofSize: 13, weight: .semibold)
+        root.addArrangedSubview(filesTitle)
+
+        let configLocation = NSTextField(labelWithString: abbreviatePath(configPath))
+        configLocation.font = .monospacedSystemFont(ofSize: 10.5, weight: .regular)
+        configLocation.textColor = .secondaryLabelColor
+        configLocation.lineBreakMode = .byTruncatingMiddle
+        configLocation.widthAnchor.constraint(equalToConstant: 512).isActive = true
+        root.addArrangedSubview(configLocation)
+
+        let configButton = NSButton(title: "Open Configuration", target: self, action: #selector(openConfigurationFile))
+        let registryButton = NSButton(title: "Open Server Registry", target: self, action: #selector(openServerRegistry))
+        let activityButton = NSButton(title: "Open Activity History", target: self, action: #selector(openActivityHistory))
+        for button in [configButton, registryButton, activityButton] {
+            button.bezelStyle = .rounded
+            button.controlSize = .small
+        }
+        let fileButtons = NSStackView(views: [configButton, registryButton, activityButton])
+        fileButtons.orientation = .horizontal
+        fileButtons.spacing = 7
+        root.addArrangedSubview(fileButtons)
+
+        let flexibleSpace = NSView()
+        flexibleSpace.setContentHuggingPriority(.defaultLow, for: .vertical)
+        root.addArrangedSubview(flexibleSpace)
+
+        let restore = NSButton(title: "Restore Generic Defaults", target: self, action: #selector(restoreDefaults))
+        restore.bezelStyle = .rounded
+        let cancel = NSButton(title: "Cancel", target: self, action: #selector(cancelSettings))
+        cancel.bezelStyle = .rounded
+        let save = NSButton(title: "Save", target: self, action: #selector(saveSettings))
+        save.bezelStyle = .rounded
+        save.keyEquivalent = "\r"
+        let buttonSpacer = NSView()
+        buttonSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let actions = NSStackView(views: [restore, buttonSpacer, cancel, save])
+        actions.orientation = .horizontal
+        actions.alignment = .centerY
+        actions.spacing = 8
+        actions.widthAnchor.constraint(equalToConstant: 512).isActive = true
+        root.addArrangedSubview(actions)
+    }
+
+    private func settingsLabel(_ text: String) -> NSTextField {
+        let field = NSTextField(labelWithString: text)
+        field.font = .systemFont(ofSize: 12, weight: .medium)
+        field.alignment = .right
+        return field
+    }
+
+    @objc private func chooseIconFile() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose Menu Bar Icon"
+        panel.prompt = "Choose"
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.png, .jpeg, .tiff]
+        if panel.runModal() == .OK, let url = panel.url {
+            iconField.stringValue = abbreviatePath(url.path)
+        }
+    }
+
+    @objc private func useBundledIcon() {
+        iconField.stringValue = ""
+    }
+
+    @objc private func restoreDefaults() {
+        nameField.stringValue = "CODEX DASHBOARD"
+        subtitleField.stringValue = "Control Center"
+        iconField.stringValue = ""
+    }
+
+    @objc private func cancelSettings() {
+        window?.close()
+    }
+
+    @objc private func saveSettings() {
+        let name = nameField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let subtitle = subtitleField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let iconPath = iconField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        onSave(BrandingConfig(
+            name: name.isEmpty ? "CODEX DASHBOARD" : name,
+            subtitle: subtitle.isEmpty ? "Control Center" : subtitle,
+            iconPath: iconPath.isEmpty ? nil : iconPath
+        ))
+        window?.close()
+    }
+
+    @objc private func openConfigurationFile() {
+        if !FileManager.default.fileExists(atPath: configPath) {
+            AppConfig().save()
+        }
+        NSWorkspace.shared.open(URL(fileURLWithPath: configPath))
+    }
+
+    @objc private func openServerRegistry() {
+        let path = homePath(".codex-menu-bar/servers.json")
+        if !FileManager.default.fileExists(atPath: path) {
+            ServerRegistry().save(ServerRegistryData())
+        }
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
+    }
+
+    @objc private func openActivityHistory() {
+        let store = ActivityStore()
+        if !FileManager.default.fileExists(atPath: store.path) {
+            store.clear()
+        }
+        NSWorkspace.shared.open(URL(fileURLWithPath: store.path))
+    }
+}
+
 final class DashboardController: NSObject, NSApplicationDelegate, @unchecked Sendable {
     private static let refreshInterval: TimeInterval = 60
     private static let localRefreshInterval: TimeInterval = 5
     private static let dashboardWidth: CGFloat = 400
     private static let cardWidth: CGFloat = 368
     private let openMenuOnLaunch = CommandLine.arguments.contains("--open-menu-on-launch")
+    private let openSettingsOnLaunch = CommandLine.arguments.contains("--open-settings-on-launch")
     private var statusItem: NSStatusItem?
     private var currentMenu: NSMenu?
     private var popover: NSPopover?
+    private var settingsWindowController: SettingsWindowController?
     private let worker = DispatchQueue(label: "codex-menu-bar.worker", qos: .userInitiated)
     private let refreshWorker = DispatchQueue(label: "codex-menu-bar.refresh", qos: .userInitiated, attributes: .concurrent)
     private let serverWorker = DispatchQueue(label: "codex-menu-bar.server-actions", qos: .userInitiated, attributes: .concurrent)
@@ -1860,6 +2087,11 @@ final class DashboardController: NSObject, NSApplicationDelegate, @unchecked Sen
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                 runtimeLog("openMenuOnLaunch buttonExists=\(self?.statusItem?.button != nil)")
                 self?.showDashboardPopover()
+            }
+        }
+        if openSettingsOnLaunch {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.openSettingsDirect()
             }
         }
     }
@@ -2086,7 +2318,12 @@ final class DashboardController: NSObject, NSApplicationDelegate, @unchecked Sen
         refreshItem.isEnabled = true
         menu.addItem(refreshItem)
 
-        let openConfig = NSMenuItem(title: "Open registry file", action: #selector(openRegistry), keyEquivalent: "")
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        settingsItem.isEnabled = true
+        menu.addItem(settingsItem)
+
+        let openConfig = NSMenuItem(title: "Open server registry", action: #selector(openRegistry), keyEquivalent: "")
         openConfig.target = self
         openConfig.isEnabled = true
         menu.addItem(openConfig)
@@ -2362,6 +2599,9 @@ final class DashboardController: NSObject, NSApplicationDelegate, @unchecked Sen
         spacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         footer.addArrangedSubview(spacer)
 
+        footer.addArrangedSubview(ActionButton(title: "Settings", symbolName: "gearshape") { [weak self] in
+            Task { @MainActor in self?.openSettingsDirect() }
+        })
         footer.addArrangedSubview(ActionButton(title: "Registry", symbolName: "list.bullet.rectangle") {
             let path = homePath(".codex-menu-bar/servers.json")
             if !FileManager.default.fileExists(atPath: path) {
@@ -3927,6 +4167,43 @@ final class DashboardController: NSObject, NSApplicationDelegate, @unchecked Sen
             ServerRegistry().save(ServerRegistryData())
         }
         NSWorkspace.shared.open(URL(fileURLWithPath: path))
+    }
+
+    @objc @MainActor private func openSettings() {
+        openSettingsDirect()
+    }
+
+    @MainActor private func openSettingsDirect() {
+        if let controller = settingsWindowController, controller.window?.isVisible == true {
+            NSApp.activate(ignoringOtherApps: true)
+            controller.showWindow(nil)
+            return
+        }
+        let controller = SettingsWindowController(
+            branding: config.branding,
+            configPath: AppConfig.filePath,
+            onSave: { [weak self] branding in
+                guard let self else { return }
+                self.config.branding = branding
+                self.config.save()
+                self.configureStatusItem()
+                self.activityStore.record(
+                    category: "settings",
+                    title: "Updated dashboard appearance",
+                    detail: "Saved local branding preferences",
+                    level: .success
+                )
+                if self.currentMenu != nil { self.rebuildMenu() }
+                self.refreshPopoverContentIfShown()
+            },
+            onClose: { [weak self] in
+                self?.settingsWindowController = nil
+            }
+        )
+        settingsWindowController = controller
+        NSApp.activate(ignoringOtherApps: true)
+        controller.showWindow(nil)
+        runtimeLog("settings window opened")
     }
 
     @objc @MainActor private func quitApp() {

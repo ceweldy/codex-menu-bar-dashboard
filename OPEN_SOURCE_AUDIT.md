@@ -11,6 +11,7 @@ Reviewed the Swift package, menu-bar source, installer scripts, README, example 
 - No API keys, bearer tokens, private keys, service credentials, or auth files were found in source.
 - Machine-specific remote helper details were removed from source and moved to external local config.
 - Product labels and replacement icon paths are configurable; the public defaults do not name a personal host or deployment.
+- The native Settings window writes appearance preferences only to the external local configuration file.
 - The default app bundle identifier and LaunchAgent label are generic and can be overridden with environment variables.
 - Build products, runtime logs, server registry data, and local config are ignored by git.
 - Remote-helper probe URLs are restricted to local HTTP(S) loopback hosts.

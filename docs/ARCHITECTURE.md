@@ -5,6 +5,7 @@ This is a small native macOS Swift Package with one executable target.
 ## Runtime Data Flow
 
 1. `DashboardController` owns the menu-bar item, popover, periodic refresh timer, and user actions.
+   - `SettingsWindowController` provides native local branding controls and shortcuts to dashboard data files.
 2. Collectors gather current state:
    - `ServerCollector` finds local web servers, merges them with configured services and the user's registry, and samples CPU, memory, uptime, listener count, and port conflicts.
    - `RemoteProjectCollector` reads Codex remote connection state and optional local remote-helper config.

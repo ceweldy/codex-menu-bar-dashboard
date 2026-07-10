@@ -12,6 +12,7 @@ It shows:
 - Per-service watchdog modes: off, notify-only, or notify and automatically restart after a failure.
 - Opt-in Tailscale Serve and Funnel controls for private-tailnet or explicitly confirmed public sharing.
 - A durable activity timeline for service, stack, watchdog, power, and sharing changes.
+- A native Settings window for dashboard labels, a replacement menu-bar icon, and quick access to local configuration and history files.
 - A vertically scrollable dashboard that stays within the usable screen height even with many servers or remote projects.
 - A fixed configurable header with always-visible Caffeinate and closed-lid controls, live server/remote status pills, and a replaceable monochrome menu-bar logo that follows the macOS appearance.
 - Parallel full-state refreshes plus five-second local server and power checks while the dashboard is open; unchanged state does not redraw the popover.
@@ -59,6 +60,8 @@ Use [Examples/config.example.json](Examples/config.example.json) as a template. 
 Remote-control helper probes accept only local HTTP(S) loopback URLs such as `http://127.0.0.1:12345/`. Service start commands come from the user's local configuration or registry and should be treated as trusted shell input.
 
 Branding is optional. `branding.name` and `branding.subtitle` replace the generic dashboard labels, while `branding.iconPath` can point to another local transparent template image. If no custom image is configured, the bundled monochrome logo is used.
+
+Open **Settings…** from the menu-bar icon's right-click menu or use the **Settings** button in the dashboard footer. Appearance changes are saved locally and applied immediately.
 
 The dashboard keeps intentional stops paused in the watchdog so a service does not immediately relaunch after you stop it. Starting it again resumes monitoring. Activity history is stored separately at `~/.codex-menu-bar/activity.json` and can be opened or cleared from the dashboard.
 

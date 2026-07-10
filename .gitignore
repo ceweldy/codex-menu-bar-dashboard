@@ -1,10 +1,17 @@
 .build/
 build/
 .DS_Store
+node_modules/
+dist/
+coverage/
+.env
 *.xcodeproj/
 *.xcworkspace/
 *.swp
 *.swo
+.env.*
+!.env.example
+*.log
 
 # Local runtime data and machine-specific config.
 .codex-menu-bar/

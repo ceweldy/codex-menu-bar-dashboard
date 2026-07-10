@@ -6,6 +6,7 @@ BINARY="$ROOT_DIR/.build/release/CodexMenuBar"
 APP_DIR="$ROOT_DIR/build/CodexMenuBar.app"
 APP_BINARY="$APP_DIR/Contents/MacOS/CodexMenuBar"
 INFO_PLIST="$APP_DIR/Contents/Info.plist"
+LOGO_SOURCE="$ROOT_DIR/Sources/CodexMenuBar/Resources/menu-bar-template.png"
 BUNDLE_IDENTIFIER="${CODEX_MENU_BAR_BUNDLE_IDENTIFIER:-io.github.codex-menu-bar.dashboard}"
 LAUNCH_AGENT_LABEL="${CODEX_MENU_BAR_LAUNCH_AGENT_LABEL:-$BUNDLE_IDENTIFIER}"
 PLIST="$HOME/Library/LaunchAgents/$LAUNCH_AGENT_LABEL.plist"
@@ -18,6 +19,7 @@ swift build -c release
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources" "$HOME/Library/LaunchAgents" "$LOG_DIR"
 cp "$BINARY" "$APP_BINARY"
+cp "$LOGO_SOURCE" "$APP_DIR/Contents/Resources/menu-bar-template.png"
 chmod +x "$APP_BINARY"
 
 /usr/libexec/PlistBuddy -c "Clear dict" "$INFO_PLIST" >/dev/null 2>&1 || true

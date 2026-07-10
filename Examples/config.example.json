@@ -1,4 +1,63 @@
 {
+  "branding": {
+    "name": "CODEX DASHBOARD",
+    "subtitle": "Control Center",
+    "iconPath": "~/.codex-menu-bar/menu-bar-template.png"
+  },
+  "localServices": [
+    {
+      "id": "/Users/example/Projects/example-web|3100",
+      "name": "Example Website",
+      "cwd": "/Users/example/Projects/example-web",
+      "startCommand": "npm run dev -- -p 3100",
+      "port": 3100,
+      "watchdog": {
+        "enabled": false,
+        "autoRestart": false,
+        "notifications": false
+      }
+    }
+  ],
+  "remoteServices": [
+    {
+      "id": "remote-example-api",
+      "name": "Example Remote API",
+      "target": "example-host",
+      "launchAgentLabel": "com.example.remote-api",
+      "launchAgentPlist": "/Users/example/Library/LaunchAgents/com.example.remote-api.plist",
+      "port": 8787,
+      "healthURL": "http://127.0.0.1:8787/health",
+      "logPaths": [
+        "/Users/example/Library/Logs/ExampleRemoteAPI/server.out.log",
+        "/Users/example/Library/Logs/ExampleRemoteAPI/server.err.log"
+      ],
+      "watchdog": {
+        "enabled": true,
+        "autoRestart": false,
+        "notifications": true
+      }
+    }
+  ],
+  "projectStacks": [
+    {
+      "id": "example-stack",
+      "name": "Example Project",
+      "localServiceIDs": [
+        "/Users/example/Projects/example-web|3100"
+      ],
+      "remoteServiceIDs": [
+        "remote-example-api"
+      ]
+    }
+  ],
+  "publishTargets": [
+    {
+      "id": "example-web-local",
+      "name": "Example Website",
+      "localServiceID": "/Users/example/Projects/example-web|3100",
+      "port": 3100
+    }
+  ],
   "remoteHelpers": [
     {
       "name": "example-remote",

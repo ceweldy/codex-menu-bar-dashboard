@@ -1,6 +1,6 @@
 # Open-Source Audit
 
-Last reviewed: 2026-07-07
+Last reviewed: 2026-07-10
 
 ## Scope
 
@@ -10,10 +10,10 @@ Reviewed the Swift package, menu-bar source, installer scripts, README, example 
 
 - No API keys, bearer tokens, private keys, service credentials, or auth files were found in source.
 - Machine-specific remote helper details were removed from source and moved to external local config.
+- Product labels and replacement icon paths are configurable; the public defaults do not name a personal host or deployment.
 - The default app bundle identifier and LaunchAgent label are generic and can be overridden with environment variables.
 - Build products, runtime logs, server registry data, and local config are ignored by git.
-- Generated web-server starts avoid shell execution where possible; fallback shell commands require user confirmation.
-- Remote-helper URLs are restricted to local HTTP(S) loopback hosts.
+- Remote-helper probe URLs are restricted to local HTTP(S) loopback hosts.
 - GitHub Dependabot metadata is present under `.github/`.
 
 ## Local-only Data

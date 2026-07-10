@@ -8,7 +8,8 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "CodexMenuBar"
+            name: "CodexMenuBar",
+            exclude: ["Resources"]
         )
     ]
 )
